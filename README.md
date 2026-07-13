@@ -48,7 +48,7 @@ The goal of this repository is to provide a hands-on, reproducible reference for
 ## Architecture
 
 <p align="center">
-  <img src="docs/Architecture.png" alt="Kubernetes Monitoring Architecture" width="850">
+  <img src="Architecture.png" alt="Kubernetes Monitoring Architecture" width="850">
 </p>
 
 **Flow summary:**

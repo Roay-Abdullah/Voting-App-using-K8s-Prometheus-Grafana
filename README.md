@@ -75,8 +75,8 @@ The goal of this repository is to provide a hands-on, reproducible reference for
 ```
 .
 ├── voting-app/              # Application source and Dockerfiles for each microservice
-├── k8s-manifests/           # Kubernetes Deployment/Service/Namespace manifests for the app
-├── helm/                    # Helm values files for the Prometheus & Grafana stack
+├── k8s/                     # Kubernetes Deployment/Service/Namespace manifests for the app
+├── get_helm.sh              # Helm values files for the Prometheus & Grafana stack
 ├── dashboards/              # Grafana dashboard JSON exports (if provisioned)
 ├── docs/                    # Architecture diagram and supporting documentation
 └── README.md

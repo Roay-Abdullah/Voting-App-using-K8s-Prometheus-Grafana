@@ -188,13 +188,13 @@ Once logged into Grafana:
 ### Dashboard Previews
 
 <p align="center">
-  <img src="docs/Bandwidth.png" alt="Bandwidth Monitoring Dashboard" width="900">
+  <img src="Bandwidth.png" alt="Bandwidth Monitoring Dashboard" width="900">
   <br>
   <em>Bandwidth Monitoring — Receive/Transmit metrics per pod</em>
 </p>
 
 <p align="center">
-  <img src="docs/CPU%20usage.png" alt="CPU Usage Dashboard" width="900">
+  <img src="CPU usage.png" alt="CPU Usage Dashboard" width="900">
   <br>
   <em>CPU Usage — Per-pod CPU consumption over time</em>
 </p>

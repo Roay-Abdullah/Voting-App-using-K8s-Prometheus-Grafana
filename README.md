@@ -28,9 +28,7 @@ A containerized voting application deployed on Kubernetes, instrumented end-to-e
 - [Grafana Dashboards](#grafana-dashboards)
 - [Monitoring Design](#monitoring-design)
 - [Troubleshooting](#troubleshooting)
-- [Roadmap](#roadmap)
 - [Contributing](#contributing)
-- [License](#license)
 - [Contact](#contact)
 
 ---
@@ -233,12 +231,6 @@ Once logged into Grafana:
 | `helm install` fails | Stale or missing repo index | Run `helm repo update` before installing |
 | Exporters not scraped | Missing `ServiceMonitor`/scrape annotations | Verify `ServiceMonitor` labels match the Prometheus Operator's selector |
 
-## Roadmap
-
-- [ ] Add Alertmanager rules for pod restarts and node resource pressure
-- [ ] Add a CI/CD pipeline (GitHub Actions) for automated builds and deployments
-- [ ] Package the voting app itself as a Helm chart
-- [ ] Add persistent storage configuration for Prometheus
 
 ## Contributing
 

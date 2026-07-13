@@ -1,103 +1,132 @@
-```markdown
 # Voting App on Kubernetes with Prometheus & Grafana Monitoring
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-v1.XX-blue.svg)](https://kubernetes.io/)
-[![Prometheus](https://img.shields.io/badge/Prometheus-Enabled-orange.svg)](https://prometheus.io/)
-[![Grafana](https://img.shields.io/badge/Grafana-Enabled-FF4088.svg)](https://grafana.com/)
+A containerized voting application deployed on Kubernetes, instrumented end-to-end with a production-style observability stack. The cluster's node and workload metrics are scraped by Prometheus and visualized through Grafana dashboards, with Helm used to package and manage the monitoring stack.
 
-A complete **three-tier voting application** deployed on a local **KinD (Kubernetes in Docker)** cluster, fully instrumented with **Prometheus** for metrics collection and **Grafana** for observability and visualization.
-
----
-
-## 🚀 Overview
-
-This project demonstrates a production-grade setup of a microservices-based voting application running on Kubernetes. It showcases:
-
-- Containerized microservices (Python, .NET, Node.js)
-- Persistent storage with PostgreSQL
-- Message queuing with Redis
-- Local Kubernetes cluster management with KinD
-- Comprehensive monitoring stack using Prometheus + Grafana via Helm
-- Service exposure and inter-service communication
-- Resource monitoring dashboards (CPU, Memory, Bandwidth, etc.)
-
-**Perfect for learning Kubernetes, DevOps practices, observability, and monitoring in a hands-on way.**
+<p align="left">
+  <img alt="Kubernetes" src="https://img.shields.io/badge/Kubernetes-326CE5?style=flat&logo=kubernetes&logoColor=white">
+  <img alt="Helm" src="https://img.shields.io/badge/Helm-0F1689?style=flat&logo=helm&logoColor=white">
+  <img alt="Prometheus" src="https://img.shields.io/badge/Prometheus-E6522C?style=flat&logo=prometheus&logoColor=white">
+  <img alt="Grafana" src="https://img.shields.io/badge/Grafana-F46800?style=flat&logo=grafana&logoColor=white">
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white">
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-green.svg">
+</p>
 
 ---
 
-## 🏗️ Architecture
+## Table of Contents
 
-### Application Components
-
-- **Vote (Frontend)**: Python/Flask web app for casting votes (Cats vs Dogs)
-- **Redis**: In-memory data store for queuing votes
-- **Worker**: .NET background worker that processes votes from Redis
-- **PostgreSQL (DB)**: Persistent database for storing vote results
-- **Result**: Node.js web app for real-time visualization of voting results
-
-### Infrastructure
-
-- **KinD Cluster**: Multi-node local Kubernetes cluster
-- **Prometheus**: Scrapes metrics from cluster and applications
-- **Grafana**: Rich dashboards for visualization and alerting
-- **Kubernetes Services & Deployments**: Defined in `/k8s` directory
-
-![Architecture Diagram](architecture.png) <!-- Replace with actual image if available -->
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Repository Structure](#repository-structure)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+  - [1. Clone the Repository](#1-clone-the-repository)
+  - [2. Set Up the Kubernetes Cluster](#2-set-up-the-kubernetes-cluster)
+  - [3. Deploy the Voting App](#3-deploy-the-voting-app)
+  - [4. Install the Monitoring Stack with Helm](#4-install-the-monitoring-stack-with-helm)
+  - [5. Access the Services](#5-access-the-services)
+- [Grafana Dashboards](#grafana-dashboards)
+- [Monitoring Design](#monitoring-design)
+- [Troubleshooting](#troubleshooting)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
 
 ---
 
-## 📁 Project Structure
+## Overview
 
-```bash
-Voting-App-using-K8s-Prometheus-Grafana/
-├── k8s/                    # Kubernetes manifests (Deployments, Services)
-│   ├── vote-deployment.yaml
-│   ├── vote-service.yaml
-│   ├── worker-deployment.yaml
-│   ├── db-deployment.yaml
-│   ├── redis-deployment.yaml
-│   └── result-deployment.yaml
-├── kind-cluster/           # KinD configuration
-│   ├── config.yml
-│   └── dashboard-adminuser.yml
-├── vote/                   # Python Flask frontend
-├── worker/                 # .NET worker
-├── result/                 # Node.js results app
-├── get_helm.sh             # Helm installer script
-├── CPU usage.png
-├── Bandwidth.png
+This project demonstrates a complete DevOps workflow for deploying and observing a stateful, multi-service application on Kubernetes:
+
+- The **voting application** is deployed as a set of Kubernetes workloads (Deployments/Services) managed by the cluster's control plane and scheduled across worker nodes.
+- **Exporters** (node-exporter, kube-state-metrics) run alongside the application to expose infrastructure- and workload-level metrics in Prometheus format.
+- **Prometheus** scrapes, stores, and queries those metrics via PromQL.
+- **Grafana** connects to Prometheus as a data source and renders the metrics as dashboards.
+- **Helm** is used to deploy and manage both Prometheus and Grafana as versioned, repeatable releases rather than hand-rolled manifests.
+
+The goal of this repository is to provide a hands-on, reproducible reference for standing up application monitoring on Kubernetes using industry-standard tooling.
+
+## Architecture
+
+```
+                         ┌─────────────────────────────────────────┐
+                         │            Kubernetes Cluster             │
+                         │                                           │
+                         │   ┌───────────────┐   ┌────────────────┐  │
+                         │   │    Master      │──▶│  Worker Nodes  │  │
+                         │   │ API server,    │   │ kubelet,       │  │
+                         │   │ etcd           │   │ exporters      │  │
+                         │   └───────────────┘   └────────────────┘  │
+                         └───────────────────┬───────────────────────┘
+                                              │
+                                              ▼
+                                   ┌────────────────────┐
+                                   │      Exporters       │
+                                   │ node & kube-state     │
+                                   │       metrics         │
+                                   └──────────┬───────────┘
+                                              │
+                                              ▼
+                     ┌──────────────┐   ┌──────────────────────┐
+                     │     Helm      │──▶│      Prometheus       │
+                     │ Deploys &     │   │  Scrape, query        │
+                     │ manages       │   │  (PromQL), store       │
+                     └──────┬────────┘   └───────────┬───────────┘
+                            │                          │
+                            └─────────────┐            ▼
+                                           ▼    ┌──────────────────┐
+                                           ────▶│      Grafana      │
+                                                │ Dashboards &      │
+                                                │ data sources      │
+                                                └──────────────────┘
+```
+
+**Flow summary:**
+
+1. The Kubernetes **master** (API server, etcd) schedules the voting app and monitoring components onto **worker nodes**.
+2. Each worker node runs **kubelet** and metric **exporters** (node-exporter for host-level metrics, kube-state-metrics for Kubernetes object state).
+3. **Prometheus** periodically scrapes those exporters, stores the resulting time-series data, and exposes it for querying via PromQL.
+4. **Grafana** is configured with Prometheus as a data source and renders the scraped metrics as dashboards.
+5. **Helm** owns the lifecycle of both Prometheus and Grafana, installing them as charts and managing upgrades/rollbacks as a single release.
+
+## Tech Stack
+
+| Layer | Tool |
+|---|---|
+| Container orchestration | Kubernetes |
+| Package management | Helm |
+| Metrics collection | Prometheus, node-exporter, kube-state-metrics |
+| Visualization | Grafana |
+| Containerization | Docker |
+| Application | Voting app services (vote / worker / result) |
+
+## Repository Structure
+
+```
+.
+├── voting-app/              # Application source and Dockerfiles for each microservice
+├── k8s-manifests/           # Kubernetes Deployment/Service/Namespace manifests for the app
+├── helm/                    # Helm values files for the Prometheus & Grafana stack
+├── dashboards/              # Grafana dashboard JSON exports (if provisioned)
+├── docs/                    # Architecture diagram and supporting documentation
 └── README.md
 ```
 
----
+> Adjust the tree above to match the actual folder names in the repository.
 
-## ✨ Features
+## Prerequisites
 
-- **Full-stack Microservices** on Kubernetes
-- **Real-time Voting** with live results
-- **Persistent Storage** using PVCs
-- **Monitoring & Observability**
-  - Prometheus metrics scraping
-  - Pre-configured Grafana dashboards
-  - Resource utilization tracking (CPU, Memory, Network)
-- **Easy Local Setup** with KinD
-- **Helm-based Monitoring Stack**
-- **Scalable Deployments**
+Make sure the following are installed and available on your `PATH`:
 
----
+- [Docker](https://docs.docker.com/get-docker/)
+- A Kubernetes cluster — local (Minikube, Kind, k3d) or cloud-managed (EKS, GKE, AKS)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [Helm 3+](https://helm.sh/docs/intro/install/)
+- `git`
 
-## 🛠️ Prerequisites
-
-- Docker (latest version recommended)
-- kubectl
-- Helm (v3+)
-- Git
-- Minimum 4GB RAM (8GB+ recommended)
-
----
-
-## 🚀 Quick Start
+## Getting Started
 
 ### 1. Clone the Repository
 
@@ -106,172 +135,127 @@ git clone https://github.com/Roay-Abdullah/Voting-App-using-K8s-Prometheus-Grafa
 cd Voting-App-using-K8s-Prometheus-Grafana
 ```
 
-### 2. Create KinD Cluster
+### 2. Set Up the Kubernetes Cluster
+
+If you don't already have a cluster running:
 
 ```bash
-# Create cluster with multi-node config
-kind create cluster --config kind-cluster/config.yml --name voting-app
+# Example using Minikube
+minikube start --cpus=4 --memory=6g
+```
 
-# Verify cluster
+Verify the cluster is up:
+
+```bash
 kubectl get nodes
 ```
 
-### 3. Install Helm (if not installed)
+### 3. Deploy the Voting App
 
 ```bash
-chmod +x get_helm.sh
-./get_helm.sh
+kubectl create namespace voting-app
+kubectl apply -f k8s-manifests/ -n voting-app
+kubectl get pods -n voting-app -w
 ```
 
-### 4. Deploy Monitoring Stack (Prometheus + Grafana)
+### 4. Install the Monitoring Stack with Helm
+
+Add the Prometheus community Helm repository and install the stack:
 
 ```bash
-# Add Prometheus Helm repo
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
 
-# Create monitoring namespace
-kubectl create namespace monitoring
-
-# Install kube-prometheus-stack
-helm install prometheus prometheus-community/kube-prometheus-stack \
+helm install monitoring prometheus-community/kube-prometheus-stack \
   --namespace monitoring \
-  --set grafana.enabled=true \
-  --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false
+  --create-namespace \
+  -f helm/values-monitoring.yaml
 ```
 
-### 5. Deploy the Voting Application
+Confirm all monitoring pods are running:
 
 ```bash
-kubectl apply -f k8s/
+kubectl get pods -n monitoring
 ```
 
-### 6. Access the Applications
+### 5. Access the Services
+
+Port-forward each service locally to reach it from your browser:
 
 ```bash
-# Port-forward services
-kubectl port-forward svc/vote 5000:5000
-kubectl port-forward svc/result 5001:5001
-kubectl port-forward svc/prometheus-operated -n monitoring 9090:9090
-kubectl port-forward svc/prometheus-grafana -n monitoring 3000:80
+# Voting app
+kubectl port-forward svc/vote -n voting-app 5000:80
+
+# Prometheus
+kubectl port-forward svc/monitoring-kube-prometheus-prometheus -n monitoring 9090:9090
+
+# Grafana
+kubectl port-forward svc/monitoring-grafana -n monitoring 3000:80
 ```
 
-- **Vote App**: http://localhost:5000
-- **Results**: http://localhost:5001
-- **Grafana**: http://localhost:3000 (default credentials: admin / prom-operator)
-- **Prometheus**: http://localhost:9090
+| Service | URL | Default Credentials |
+|---|---|---|
+| Voting App | http://localhost:5000 | — |
+| Prometheus | http://localhost:9090 | — |
+| Grafana | http://localhost:3000 | `admin` / (see Helm values or `kubectl get secret`) |
 
----
-
-## 📊 Observability
-
-### Grafana Dashboards
-
-- Cluster resource usage
-- Pod metrics
-- Application-specific metrics
-- Custom voting app dashboards
-
-**Example Screenshots:**
-
-![CPU Usage](CPU%20usage.png)
-![Bandwidth](Bandwidth.png)
-
----
-
-## 🔧 Customization
-
-### Scaling
+To retrieve the Grafana admin password if it was auto-generated:
 
 ```bash
-kubectl scale deployment/vote --replicas=3
+kubectl get secret monitoring-grafana -n monitoring \
+  -o jsonpath="{.data.admin-password}" | base64 --decode
 ```
 
-### Adding Custom Metrics
+## Grafana Dashboards
 
-1. Instrument your applications with Prometheus client libraries
-2. Create ServiceMonitor CRDs
-3. Import dashboards into Grafana
+Once logged into Grafana:
 
-### Persistent Volumes
+1. Confirm Prometheus is registered under **Connections → Data sources**.
+2. Import the recommended community dashboards (or the ones in `dashboards/`), for example:
+   - **Kubernetes Cluster Monitoring** (node CPU/memory/disk)
+   - **Kubernetes Pods** (per-pod resource usage)
+   - **Kube-state-metrics** (deployment/replica health)
+3. Optionally build a custom dashboard tracking voting app-specific metrics (request rate, pod restarts, vote throughput).
 
-PostgreSQL uses a hostPath volume for local development. For production, use cloud storage (EBS, GCE PD, etc.).
+## Monitoring Design
 
----
+- **node-exporter** runs as a DaemonSet, exposing host-level metrics (CPU, memory, disk, network) from every worker node.
+- **kube-state-metrics** exposes the state of Kubernetes objects (deployments, pods, replica sets) as Prometheus metrics.
+- **Prometheus** scrapes both sources on a configurable interval and retains the resulting time series, queryable via PromQL.
+- **Grafana** is pre-wired to Prometheus as its data source, so dashboards update automatically as new metrics are scraped.
+- **Helm** manages Prometheus and Grafana as a single `kube-prometheus-stack` release, making upgrades, rollbacks, and configuration changes (via `values.yaml`) reproducible.
 
-## 🧪 Testing
+## Troubleshooting
 
-- Cast votes via the frontend
-- Watch real-time updates on the results page
-- Monitor metrics in Prometheus/Grafana
-- Check logs: `kubectl logs -f deployment/worker`
+| Issue | Likely Cause | Fix |
+|---|---|---|
+| Pods stuck in `Pending` | Insufficient cluster resources | Increase CPU/memory allocated to the cluster |
+| Grafana shows "No data" | Prometheus data source misconfigured | Check the data source URL matches the Prometheus service name/namespace |
+| `helm install` fails | Stale or missing repo index | Run `helm repo update` before installing |
+| Exporters not scraped | Missing `ServiceMonitor`/scrape annotations | Verify `ServiceMonitor` labels match the Prometheus Operator's selector |
 
----
+## Roadmap
 
-## 🛡️ Cleanup
+- [ ] Add Alertmanager rules for pod restarts and node resource pressure
+- [ ] Add a CI/CD pipeline (GitHub Actions) for automated builds and deployments
+- [ ] Package the voting app itself as a Helm chart
+- [ ] Add persistent storage configuration for Prometheus
 
-```bash
-# Delete application
-kubectl delete -f k8s/
+## Contributing
 
-# Uninstall monitoring
-helm uninstall prometheus -n monitoring
+Contributions are welcome. To contribute:
 
-# Delete cluster
-kind delete cluster --name voting-app
-```
-
----
-
-## 🏆 Technologies Used
-
-- **Kubernetes** (KinD)
-- **Docker**
-- **Prometheus**
-- **Grafana**
-- **Helm**
-- **Python/Flask**
-- **.NET**
-- **Node.js**
-- **Redis**
-- **PostgreSQL**
-
----
-
-## 📝 Resume / Portfolio Description
-
-**Project Title:**  
-Voting Application with Kubernetes, Prometheus & Grafana Observability
-
-**Description:**  
-Designed and implemented a complete three-tier voting application deployed on a local Kubernetes (KinD) cluster. Integrated Prometheus for metrics collection and Grafana for visualization, demonstrating end-to-end observability, microservices architecture, and modern DevOps practices. Automated deployment using Kubernetes manifests and Helm charts.
-
-**Key Achievements:**
-- Successfully orchestrated multi-language microservices
-- Implemented comprehensive monitoring and alerting
-- Configured local multi-node Kubernetes environment
-- Demonstrated real-time data processing and visualization
-
-**Key Technologies:** Kubernetes, KinD, Prometheus, Grafana, Helm, Docker, Redis, PostgreSQL
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/your-feature`)
+3. Commit your changes (`git commit -m "Add your feature"`)
+4. Push to the branch (`git push origin feature/your-feature`)
 5. Open a Pull Request
 
----
+## License
 
-## 🙏 Acknowledgments
+Distributed under the MIT License. See `LICENSE` for more information.
 
-- Original voting app example from Docker
-- Prometheus Community Helm Charts
-- KinD project for local Kubernetes
+## Contact
 
----
+**Roay Muhammad Abdullah**
+GitHub: [@Roay-Abdullah](https://github.com/Roay-Abdullah)

@@ -8,7 +8,6 @@ A containerized voting application deployed on Kubernetes, instrumented end-to-e
   <img alt="Prometheus" src="https://img.shields.io/badge/Prometheus-E6522C?style=flat&logo=prometheus&logoColor=white">
   <img alt="Grafana" src="https://img.shields.io/badge/Grafana-F46800?style=flat&logo=grafana&logoColor=white">
   <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white">
-  <img alt="License" src="https://img.shields.io/badge/License-MIT-green.svg">
 </p>
 
 ---
@@ -251,9 +250,6 @@ Contributions are welcome. To contribute:
 4. Push to the branch (`git push origin feature/your-feature`)
 5. Open a Pull Request
 
-## License
-
-Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Contact
 
